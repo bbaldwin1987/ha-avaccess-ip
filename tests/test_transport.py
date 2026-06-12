@@ -165,10 +165,13 @@ async def test_connect_failure_raises():
     client = t.TelnetClient("127.0.0.1")
     import avaccess_ip.transport as tr
 
-    orig = tr.TELNET_PORT
+    orig_port = tr.TELNET_PORT
+    orig_timeout = tr.CONNECT_TIMEOUT
     tr.TELNET_PORT = 1  # nothing listening
+    tr.CONNECT_TIMEOUT = 0.5  # Windows can stall a long time on refused ports
     try:
         with pytest.raises(t.TransportError):
             await client.command("cat /etc/version")
     finally:
-        tr.TELNET_PORT = orig
+        tr.TELNET_PORT = orig_port
+        tr.CONNECT_TIMEOUT = orig_timeout
