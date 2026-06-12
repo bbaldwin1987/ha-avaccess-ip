@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "AV Access IP",
+        "description": "This creates the AV Access hub. After it's added, use Configure to add your encoders and decoders one at a time by IP address."
+      }
+    },
+    "abort": {
+      "already_configured": "AV Access IP is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "AV Access IP",
+        "menu_options": {
+          "add_device": "Add a device",
+          "remove_device": "Remove a device",
+          "settings": "Settings"
+        }
+      },
+      "add_device": {
+        "title": "Add a device",
+        "description": "Choose the device type and enter its IP address. The integration will connect to verify and identify it.",
+        "data": {
+          "device_type": "Device type",
+          "host": "IP address"
+        }
+      },
+      "power_config": {
+        "title": "Display power (this decoder)",
+        "description": "Configure how this decoder turns its attached display on and off. CEC defaults work for many TVs; RS232 codes are display-specific.",
+        "data": {
+          "sinkpower_mode": "Power control method",
+          "cec_poweron_cmd": "CEC power-on code",
+          "cec_standby_cmd": "CEC standby code",
+          "rs232_hex_enable": "RS232 codes are hex",
+          "rs232_poweron_cmd": "RS232 power-on code",
+          "rs232_standby_cmd": "RS232 standby code"
+        }
+      },
+      "remove_device": {
+        "title": "Remove a device",
+        "data": {
+          "host": "Device"
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "data": {
+          "poll_interval": "Poll interval (seconds)",
+          "enable_broadcast": "Use UDP broadcast for group switching"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to the device. Check the IP address and that the device is powered on and reachable.",
+      "already_configured": "A device with that IP is already added."
+    },
+    "abort": {
+      "no_devices": "There are no devices to remove."
+    }
+  },
+  "services": {
+    "switch_group": {
+      "name": "Switch group to source",
+      "description": "Switch multiple decoders to a single encoder source at once.",
+      "fields": {
+        "target": {
+          "name": "Decoders",
+          "description": "The decoder media_player entities to switch."
+        },
+        "source": {
+          "name": "Source",
+          "description": "The encoder to route to all selected decoders (name or MAC)."
+        }
+      }
+    }
+  }
+}

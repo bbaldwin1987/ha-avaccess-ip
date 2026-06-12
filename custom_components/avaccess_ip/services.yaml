@@ -1,0 +1,20 @@
+switch_group:
+  name: Switch group to source
+  description: Switch multiple decoders to a single encoder source at once.
+  fields:
+    target:
+      name: Decoders
+      description: The decoder media_player entities to switch.
+      required: true
+      selector:
+        entity:
+          integration: avaccess_ip
+          domain: media_player
+          multiple: true
+    source:
+      name: Source
+      description: The encoder to route to all selected decoders (friendly name or MAC).
+      required: true
+      example: Apple TV
+      selector:
+        text:
