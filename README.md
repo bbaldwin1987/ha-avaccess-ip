@@ -2,7 +2,7 @@
 
 A custom [Home Assistant](https://www.home-assistant.io/) integration for **AV Access HDIP100 / 4KIP200 series** AV-over-IP encoders (TX) and decoders (RX). It models a video matrix in Home Assistant: every decoder becomes a `media_player` whose source list is your set of encoders, plus per-decoder display power control.
 
-> **Status:** early development. Phases 0–1 (transport, device model, manual add-by-IP config flow) and the entity scaffold are in place; not yet validated against hardware. See [`docs/HA-Integration-Plan.md`](docs/HA-Integration-Plan.md) for the full architecture and roadmap.
+> **Status:** first hardware-tested revision. Manual device setup, per-decoder source switching, group switching, encoder/decoder online status, and decoder display power have been validated against 4KIP200-series hardware. See [`docs/HA-Integration-Plan.md`](docs/HA-Integration-Plan.md) for the full architecture and roadmap, and [`docs/TEST-NOTES.md`](docs/TEST-NOTES.md) for current validation notes.
 
 ## Supported devices
 
@@ -19,6 +19,8 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration for **AV A
 - **Matrix switching** — each decoder is a `media_player`; pick any encoder as its source (bonded video+audio+RS232 routing).
 - **Group switching** — an `avaccess_ip.switch_group` service switches several decoders to one source at once via UDP broadcast, falling back to sequential switching when Home Assistant is not on the device subnet.
 - **Display power (per decoder)** — a `switch` per decoder drives the attached display on/off, using that decoder's configured method (CEC, RS232, or both) and on/off codes.
+- **Online status** — every configured encoder and decoder gets an online diagnostic entity so source-only encoders are visible in Home Assistant.
+- **Device management** — add, rename, and remove configured devices from the integration's Configure menu.
 
 Out of scope for now (architecture leaves room): video wall, MRX multiview, forced resolution/color space, OSD/PNG overlay, preview stream, firmware upload.
 
@@ -33,11 +35,78 @@ Out of scope for now (architecture leaves room): video wall, MRX multiview, forc
 2. Add this repository URL and select category **Integration**.
 3. Install **AV Access IP Video Distribution**, then restart Home Assistant.
 4. Go to **Settings → Devices & Services → Add Integration → AV Access IP**.
-5. Add each encoder and decoder by choosing its type and entering its IP address.
+5. Open **Configure** on the AV Access IP integration.
+6. Add each encoder and decoder by choosing its type, entering its IP address, and entering a friendly name.
+7. Confirm the detected hostname, MAC address, model, and firmware before saving.
 
 ## Manual installation (development)
 
 Copy `custom_components/avaccess_ip/` into your Home Assistant `config/custom_components/` directory and restart.
+
+Example deployment from a development checkout:
+
+```bash
+tar -cf - custom_components/avaccess_ip | ssh root@<ha-host> 'mkdir -p /config && tar -xf - -C /config'
+ssh root@<ha-host> 'ha core restart'
+```
+
+## Setup
+
+1. Go to **Settings → Devices & services → Add integration → AV Access IP**.
+2. Create the AV Access IP integration entry.
+3. Open **Configure** on that integration.
+4. Add encoders first, then decoders.
+5. Use stable IP addresses for all devices, either static IPs or DHCP reservations.
+
+The Configure menu contains:
+
+- **Add a device** — add an encoder or decoder by IP address.
+- **Rename a device** — update the friendly name stored in the integration entry.
+- **Remove a device** — remove a configured device from the integration entry.
+- **Settings** — adjust poll interval and group-switch broadcast behavior.
+
+## Using The Integration
+
+### Individual Switching
+
+Each decoder appears as a `media_player`. Select an encoder from the source dropdown to switch that decoder:
+
+```text
+Kitchen TV → Shield
+Garage TV → Zone2
+```
+
+The integration sends:
+
+```text
+gbconfig --source-select=<encoder_mac>
+e e_reconnect
+```
+
+### Group Switching
+
+Use **Developer Tools → Actions** and call `avaccess_ip.switch_group`:
+
+```yaml
+target:
+  - media_player.kitchen_tv
+  - media_player.garage_tv
+source: Shield
+```
+
+`source` can be the encoder friendly name, hostname, or bare MAC address. When broadcast is enabled and Home Assistant is on the same subnet, the integration sends a UDP `msg_b_reconnect` broadcast on port `5010`. Otherwise it falls back to switching each decoder over Telnet.
+
+### Display Power
+
+Each decoder also exposes a display power switch. The switch calls `sinkpower on` and `sinkpower off` on the decoder. Configure the decoder's CEC/RS232 behavior when adding the decoder.
+
+## Notes And Limitations
+
+- Device alias readback may return `"alias" not defined`; the integration ignores that value and uses the friendly name entered during setup.
+- Source state is polled. After a change made outside Home Assistant, the media player source may take up to one poll interval to update.
+- Integration tile logos use Home Assistant's brand image system. This repository includes local `brand/icon.png` and `brand/logo.png` assets for Home Assistant versions that support local custom integration brands.
+- The current display power switch is assumed state because the device API does not provide display power readback.
+- Video wall, MRX multiview, preview streams, overlays, and firmware upload are intentionally out of scope for this revision.
 
 ## Development
 

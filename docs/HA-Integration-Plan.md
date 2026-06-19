@@ -5,6 +5,8 @@
 **Distribution:** HACS custom integration (`custom_components/avaccess_ip`)
 **Source of truth:** AV Access *API Command Guide — HDIP100/4KIP200 Series, V1.0.3*
 
+**Current validation snapshot:** the first hardware-tested revision validates manual device setup, friendly naming, hostname/MAC parsing, decoder source switching, group switching, encoder/decoder online diagnostics, and decoder display power against 4KIP200-series devices. See [`TEST-NOTES.md`](TEST-NOTES.md) for tested hardware and raw device observations.
+
 ---
 
 ## 1. What these devices are
