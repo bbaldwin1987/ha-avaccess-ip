@@ -22,6 +22,8 @@
 - 4KIP200-series encoders and decoders.
 - Per-decoder switching between Shield and Zone2 sources.
 - Group switching between multiple decoders.
+- HACS install/update flow on a separate target Home Assistant instance.
+- Device loading, individual switching, group switching, and display power on the target instance.
 - CEC display power on Kitchen TV.
 - Device alias sentinel handling for `"alias" not defined`.
 

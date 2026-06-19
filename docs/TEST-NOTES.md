@@ -1,11 +1,11 @@
 # AV Access IP Hardware Test Notes
 
-These notes capture the first working hardware validation pass for the custom Home Assistant integration.
+These notes capture the first working hardware validation pass for the custom Home Assistant integration. The `v0.1.0` release was also installed through HACS on a separate target Home Assistant instance and passed device load, individual switching, group switching, and display-power validation.
 
 ## Test Environment
 
 - Home Assistant host: VM on the same subnet as the AV Access devices.
-- Integration deployment: copied to `/config/custom_components/avaccess_ip` and Home Assistant Core restarted.
+- Integration deployment: copied to `/config/custom_components/avaccess_ip` for development validation, then installed/updated through HACS on the target Home Assistant instance.
 - Device family tested: AV Access 4KIP200-series encoders and decoders.
 - Control path: Telnet on TCP port `24`.
 - Group-switch path: UDP broadcast on port `5010`.
@@ -20,7 +20,7 @@ These notes capture the first working hardware validation pass for the custom Ho
 | Garage TV | Decoder | `192.168.86.8` | `IPD935-341B2284B769` | `341B2284B769` |
 | Living Room TV | Decoder | `192.168.86.82` | `IPD935-341B2284B7A7` | `341B2284B7A7` |
 
-Living Room TV was directly probed and identified successfully. It still needs the same full Home Assistant UI add/switch/power validation pass as Kitchen TV and Garage TV.
+Living Room TV was directly probed, then loaded through the target Home Assistant instance as part of the final all-device validation pass.
 
 ## Confirmed Working
 
@@ -35,10 +35,11 @@ Living Room TV was directly probed and identified successfully. It still needs t
 - Kitchen TV display power works via CEC using configured CEC codes.
 - Individual decoder source switching works for `Shield` and `Zone2`.
 - Group switching works through `avaccess_ip.switch_group`.
+- Target Home Assistant validation passed for device loading, individual switching, group switching, and display power.
 - Source resolution works by friendly name, hostname, or MAC address.
 - Device management supports add, edit, rename, remove, and global settings.
 - Utility services are exposed for clear source, raw CEC, and reboot.
-- Sequential switching uses the same Telnet command path as individual switching; broadcast-disabled group fallback still needs a dedicated UI/service test.
+- Sequential switching uses the same Telnet command path as individual switching; broadcast-disabled group fallback remains a dedicated follow-up test.
 
 ## Useful Raw Device Observations
 
@@ -144,7 +145,6 @@ If broadcast is unavailable, the integration falls back to sequential Telnet swi
 
 ## Next Validation Items
 
-- Add Living Room TV to Home Assistant and test source switching/display power.
 - Test behavior after AV Access device reboot.
 - Test switching after Home Assistant restart without reloading the integration.
 - Test disabled broadcast mode to verify sequential group-switch fallback.
