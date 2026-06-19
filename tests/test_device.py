@@ -72,6 +72,21 @@ def test_normalize_mac(raw, expected):
     assert d.normalize_mac(raw) == expected
 
 
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ('"alias" not defined', None),
+        ('"alias" not defined/ #', None),
+        ("", None),
+        (None, None),
+        ("Kitchen TV", "Kitchen TV"),
+        ('"Kitchen TV"', "Kitchen TV"),
+    ],
+)
+def test_clean_alias(raw, expected):
+    assert d.clean_alias(raw) == expected
+
+
 # ---- command builders -------------------------------------------------------
 
 def test_cmd_set_source_includes_commit():
@@ -111,6 +126,10 @@ def test_cmd_get_source():
     assert d.cmd_get_source() == "gbconfig --show --source-select"
 
 
+def test_cmd_get_hostname():
+    assert d.cmd_get_hostname() == "hostname"
+
+
 # ---- AVDevice identity ------------------------------------------------------
 
 def test_avdevice_unique_id_prefers_mac():
@@ -131,3 +150,28 @@ def test_avdevice_name_precedence():
     assert dev.device_info_name() == "IPD935-341B22822FEF"
     dev.alias = "Conference Room"
     assert dev.device_info_name() == "Conference Room"
+    dev.alias = '"alias" not defined'
+    assert dev.device_info_name() == "IPD935-341B22822FEF"
+
+
+@pytest.mark.asyncio
+async def test_async_identify_sets_hostname_mac_and_preserves_alias(monkeypatch):
+    dev = d.AVDevice(host="192.168.1.5", device_type=TYPE_DECODER, alias="Kitchen TV")
+
+    async def fake_command(command):
+        responses = {
+            "hostname": "IPD935-341B22822FEF",
+            "cat /etc/version": "IPD935\nV1.0.5",
+            "gbparam g alias": "",
+            "gbconfig --show --source-select": "IPE935-AABBCCDDEEFF",
+        }
+        return responses[command]
+
+    monkeypatch.setattr(dev.client, "command", fake_command)
+
+    await dev.async_identify()
+
+    assert dev.hostname == "IPD935-341B22822FEF"
+    assert dev.mac == "341B22822FEF"
+    assert dev.alias == "Kitchen TV"
+    assert dev.current_source_mac == "AABBCCDDEEFF"

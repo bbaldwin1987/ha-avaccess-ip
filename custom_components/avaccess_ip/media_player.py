@@ -35,6 +35,7 @@ async def async_setup_entry(
 class AVAccessMediaPlayer(AVAccessEntity, MediaPlayerEntity):
     """A decoder presented as a media_player with source selection only."""
 
+    _attr_icon = "mdi:video-input-hdmi"
     _attr_name = None  # use the device name
     _attr_supported_features = (
         MediaPlayerEntityFeature.SELECT_SOURCE
@@ -67,11 +68,29 @@ class AVAccessMediaPlayer(AVAccessEntity, MediaPlayerEntity):
 
     async def async_select_source(self, source: str) -> None:
         """Route the chosen encoder to this decoder (bonded A/V/RS232)."""
+        _LOGGER.debug(
+            "Selecting source %s for decoder %s (%s)",
+            source,
+            self._device.device_info_name(),
+            self._device.host,
+        )
         encoder = self.coordinator.encoder_by_name(source)
         if encoder is None or not encoder.mac:
-            _LOGGER.warning("Unknown source %s for %s", source, self.entity_id)
+            _LOGGER.warning(
+                "Unknown source %s for %s. Available sources: %s",
+                source,
+                self.entity_id,
+                sorted(self.coordinator.source_options().values()),
+            )
             return
         await self._device.async_set_source(encoder.mac)
+        _LOGGER.debug(
+            "Selected source %s (%s) for decoder %s (%s)",
+            encoder.device_info_name(),
+            encoder.mac,
+            self._device.device_info_name(),
+            self._device.host,
+        )
         self.async_write_ha_state()  # optimistic; confirmed next poll
 
     async def async_turn_off(self) -> None:

@@ -66,8 +66,14 @@ class AVAccessCoordinator(DataUpdateCoordinator[dict[str, AVDevice]]):
         return None
 
     def encoder_by_name(self, name: str) -> AVDevice | None:
+        wanted = name.strip().casefold()
         for d in self.encoders:
-            if d.device_info_name() == name:
+            names = [d.device_info_name()]
+            if d.hostname:
+                names.append(d.hostname)
+            if d.mac:
+                names.append(d.mac)
+            if any(candidate.strip().casefold() == wanted for candidate in names):
                 return d
         return None
 

@@ -11,19 +11,27 @@ from homeassistant.core import HomeAssistant
 from .const import (
     CONF_DEVICE_TYPE,
     CONF_DEVICES,
+    CONF_FIRMWARE,
     CONF_HOST,
+    CONF_HOSTNAME,
+    CONF_MAC,
+    CONF_MODEL,
     CONF_NAME,
     CONF_POLL_INTERVAL,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
 )
 from .coordinator import AVAccessCoordinator
-from .device import AVDevice
+from .device import AVDevice, clean_alias
 from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.MEDIA_PLAYER, Platform.SWITCH]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.MEDIA_PLAYER,
+    Platform.SWITCH,
+]
 
 
 def _build_devices(entry: ConfigEntry) -> dict[str, AVDevice]:
@@ -34,8 +42,12 @@ def _build_devices(entry: ConfigEntry) -> dict[str, AVDevice]:
         device = AVDevice(
             host=host,
             device_type=item.get(CONF_DEVICE_TYPE, "decoder"),
-            alias=item.get(CONF_NAME),
+            alias=clean_alias(item.get(CONF_NAME)),
         )
+        device.hostname = item.get(CONF_HOSTNAME)
+        device.mac = item.get(CONF_MAC)
+        device.model = item.get(CONF_MODEL)
+        device.firmware = item.get(CONF_FIRMWARE)
         devices[host] = device
     return devices
 

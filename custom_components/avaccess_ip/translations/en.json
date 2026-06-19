@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "AV Access IP",
-        "description": "This creates the AV Access hub. After it's added, use Configure to add your encoders and decoders one at a time by IP address."
+        "description": "This creates one AV Access integration entry. After it is added, open Configure to add encoders and decoders by IP address."
       }
     },
     "abort": {
@@ -13,19 +13,32 @@
   "options": {
     "step": {
       "init": {
-        "title": "AV Access IP",
-        "menu_options": {
-          "add_device": "Add a device",
-          "remove_device": "Remove a device",
-          "settings": "Settings"
+        "title": "Manage AV Access IP",
+        "data": {
+          "action": "Action"
         }
       },
       "add_device": {
         "title": "Add a device",
-        "description": "Choose the device type and enter its IP address. The integration will connect to verify and identify it.",
+        "description": "Choose the device type, enter its IP address, and give it a friendly name. The integration will connect to verify and identify it.",
         "data": {
           "device_type": "Device type",
-          "host": "IP address"
+          "host": "IP address",
+          "name": "Friendly name"
+        }
+      },
+      "confirm_device": {
+        "title": "Confirm device",
+        "description": "Review the detected device data. The detected fields are informational; only the friendly name from the previous step is saved as the Home Assistant name.",
+        "data": {
+          "confirm": "Add this device",
+          "detected_name": "Friendly name",
+          "detected_host": "IP address",
+          "detected_type": "Detected type",
+          "detected_hostname": "Detected hostname",
+          "detected_mac": "Detected MAC address",
+          "detected_model": "Detected model",
+          "detected_firmware": "Detected firmware"
         }
       },
       "power_config": {
@@ -42,8 +55,17 @@
       },
       "remove_device": {
         "title": "Remove a device",
+        "description": "Remove a configured AV Access device from this integration. Home Assistant may keep old entity registry entries until you delete them from Settings > Devices & services > Entities.",
         "data": {
           "host": "Device"
+        }
+      },
+      "rename_device": {
+        "title": "Rename a device",
+        "description": "Choose a configured device, then enter the friendly name Home Assistant should use.",
+        "data": {
+          "host": "Device",
+          "name": "Friendly name"
         }
       },
       "settings": {

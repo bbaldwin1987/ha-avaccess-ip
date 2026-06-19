@@ -75,10 +75,24 @@ def normalize_mac(value: str) -> str:
     return value  # leave as-is; caller validates
 
 
+def clean_alias(value: str | None) -> str | None:
+    """Return a usable alias, ignoring firmware's not-defined sentinel."""
+    if not value:
+        return None
+    alias = value.strip().strip('"')
+    if not alias or "not defined" in alias.lower():
+        return None
+    return alias
+
+
 # ---- command builders (pure functions, easy to unit test) --------------------
 
 def cmd_get_version() -> str:
     return "cat /etc/version"
+
+
+def cmd_get_hostname() -> str:
+    return "hostname"
 
 
 def cmd_get_alias() -> str:
@@ -166,7 +180,7 @@ class AVDevice:
         return (self.mac or self.host).lower()
 
     def device_info_name(self) -> str:
-        return self.alias or self.hostname or self.host
+        return clean_alias(self.alias) or self.hostname or self.host
 
     # -- async operations ----------------------------------------------------
     async def async_identify(self) -> None:
@@ -175,6 +189,13 @@ class AVDevice:
         Reads the firmware block (which begins with the model prefix), the
         alias, and — for decoders — the current source.
         """
+        hostname = await self.client.command(cmd_get_hostname())
+        prefix, mac = parse_hostname(hostname)
+        if prefix and mac:
+            self.hostname = hostname.strip()
+            self.model_prefix = prefix
+            self.mac = mac
+
         version_block = await self.client.command(cmd_get_version())
         # version block first line is the model prefix, e.g. "IPE935"
         first = version_block.splitlines()[0].strip() if version_block else ""
@@ -186,8 +207,8 @@ class AVDevice:
         if len(lines) >= 2:
             self.firmware = lines[1]
 
-        alias = await self.client.command(cmd_get_alias())
-        self.alias = alias or None
+        alias = clean_alias(await self.client.command(cmd_get_alias()))
+        self.alias = alias or clean_alias(self.alias)
 
         if self.is_decoder:
             await self.async_update_source()

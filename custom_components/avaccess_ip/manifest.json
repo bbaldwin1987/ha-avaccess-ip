@@ -7,7 +7,6 @@
   "codeowners": ["@bbaldwin1987"],
   "config_flow": true,
   "iot_class": "local_polling",
-  "integration_type": "hub",
   "dependencies": [],
   "requirements": []
 }
