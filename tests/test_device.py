@@ -130,6 +130,14 @@ def test_cmd_get_hostname():
     assert d.cmd_get_hostname() == "hostname"
 
 
+def test_cmd_send_cec():
+    assert d.cmd_send_cec("40 04") == 'cec -s "40 04"'
+
+
+def test_cmd_reboot():
+    assert d.cmd_reboot() == "reboot"
+
+
 # ---- AVDevice identity ------------------------------------------------------
 
 def test_avdevice_unique_id_prefers_mac():

@@ -27,11 +27,21 @@ from .transport import async_send_group_switch
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SWITCH_GROUP = "switch_group"
+SERVICE_CLEAR_SOURCE = "clear_source"
+SERVICE_SEND_CEC = "send_cec"
+SERVICE_REBOOT_DEVICE = "reboot_device"
 
-_SCHEMA = vol.Schema(
+_SWITCH_GROUP_SCHEMA = vol.Schema(
     {
         vol.Required("target"): cv.entity_ids,
         vol.Required("source"): cv.string,
+    }
+)
+_ENTITY_TARGET_SCHEMA = vol.Schema({vol.Required("target"): cv.entity_ids})
+_SEND_CEC_SCHEMA = vol.Schema(
+    {
+        vol.Required("target"): cv.entity_ids,
+        vol.Required("cec_string"): cv.string,
     }
 )
 
@@ -41,9 +51,6 @@ def _find_coordinators(hass: HomeAssistant) -> list[AVAccessCoordinator]:
 
 
 async def async_setup_services(hass: HomeAssistant) -> None:
-    if hass.services.has_service(DOMAIN, SERVICE_SWITCH_GROUP):
-        return
-
     async def _handle_switch_group(call: ServiceCall) -> None:
         target_entities: list[str] = call.data["target"]
         source: str = call.data["source"]
@@ -94,31 +101,83 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         for coord in coordinators:
             coord.async_update_listeners()
 
-    hass.services.async_register(
-        DOMAIN, SERVICE_SWITCH_GROUP, _handle_switch_group, schema=_SCHEMA
-    )
+    async def _handle_clear_source(call: ServiceCall) -> None:
+        coordinators = _find_coordinators(hass)
+        decoders = _resolve_decoders(hass, coordinators, call.data["target"])
+        if not decoders:
+            _LOGGER.error("clear_source: no matching decoders for %s", call.data["target"])
+            return
+        await asyncio.gather(*(d.async_clear_source() for d in decoders))
+        for coord in coordinators:
+            coord.async_update_listeners()
+
+    async def _handle_send_cec(call: ServiceCall) -> None:
+        coordinators = _find_coordinators(hass)
+        devices = _resolve_devices(hass, coordinators, call.data["target"])
+        if not devices:
+            _LOGGER.error("send_cec: no matching devices for %s", call.data["target"])
+            return
+        await asyncio.gather(
+            *(d.async_send_cec(call.data["cec_string"]) for d in devices)
+        )
+
+    async def _handle_reboot_device(call: ServiceCall) -> None:
+        coordinators = _find_coordinators(hass)
+        devices = _resolve_devices(hass, coordinators, call.data["target"])
+        if not devices:
+            _LOGGER.error(
+                "reboot_device: no matching devices for %s", call.data["target"]
+            )
+            return
+        await asyncio.gather(*(d.async_reboot() for d in devices))
+
+    service_defs = {
+        SERVICE_SWITCH_GROUP: (_handle_switch_group, _SWITCH_GROUP_SCHEMA),
+        SERVICE_CLEAR_SOURCE: (_handle_clear_source, _ENTITY_TARGET_SCHEMA),
+        SERVICE_SEND_CEC: (_handle_send_cec, _SEND_CEC_SCHEMA),
+        SERVICE_REBOOT_DEVICE: (_handle_reboot_device, _ENTITY_TARGET_SCHEMA),
+    }
+    for service, (handler, schema) in service_defs.items():
+        if not hass.services.has_service(DOMAIN, service):
+            hass.services.async_register(DOMAIN, service, handler, schema=schema)
 
 
 async def async_unload_services(hass: HomeAssistant) -> None:
-    if hass.services.has_service(DOMAIN, SERVICE_SWITCH_GROUP):
-        hass.services.async_remove(DOMAIN, SERVICE_SWITCH_GROUP)
+    for service in (
+        SERVICE_SWITCH_GROUP,
+        SERVICE_CLEAR_SOURCE,
+        SERVICE_SEND_CEC,
+        SERVICE_REBOOT_DEVICE,
+    ):
+        if hass.services.has_service(DOMAIN, service):
+            hass.services.async_remove(DOMAIN, service)
 
 
 def _resolve_decoders(hass, coordinators, entity_ids):
     """Map media_player entity_ids back to AVDevice decoder objects."""
+    return [d for d in _resolve_devices(hass, coordinators, entity_ids) if d.is_decoder]
+
+
+def _resolve_devices(hass, coordinators, entity_ids):
+    """Map AV Access entity_ids back to AVDevice objects."""
     from homeassistant.helpers import entity_registry as er
 
     registry = er.async_get(hass)
     devices = []
+    seen = set()
     for entity_id in entity_ids:
         entry = registry.async_get(entity_id)
         if not entry or not entry.unique_id:
             continue
-        # unique_id format: "<device.unique_id>_media_player"
-        base = entry.unique_id.rsplit("_media_player", 1)[0]
+        base = entry.unique_id
+        for suffix in ("_media_player", "_display_power", "_online"):
+            if base.endswith(suffix):
+                base = base[: -len(suffix)]
+                break
         for coord in coordinators:
-            for dev in coord.decoders:
-                if dev.unique_id == base:
+            for dev in coord.devices.values():
+                if dev.unique_id == base and dev.unique_id not in seen:
+                    seen.add(dev.unique_id)
                     devices.append(dev)
     return devices
 

@@ -233,6 +233,12 @@ class AVDevice:
     async def async_clear_source(self) -> None:
         await self.async_set_source(SOURCE_NULL)
 
+    async def async_send_cec(self, cec_string: str) -> None:
+        await self.client.command(cmd_send_cec(cec_string))
+
+    async def async_reboot(self) -> None:
+        await self.client.command(cmd_reboot())
+
     async def async_set_display_power(self, on: bool) -> None:
         await self.client.command(cmd_sinkpower(on))
 

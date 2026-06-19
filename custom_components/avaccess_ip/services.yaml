@@ -18,3 +18,50 @@ switch_group:
       example: Apple TV
       selector:
         text:
+
+clear_source:
+  name: Clear decoder source
+  description: Unbind one or more decoder media_player entities from their current source.
+  fields:
+    target:
+      name: Decoders
+      description: The decoder media_player entities to clear.
+      required: true
+      selector:
+        entity:
+          integration: avaccess_ip
+          domain: media_player
+          multiple: true
+
+send_cec:
+  name: Send CEC command
+  description: Send a raw CEC command string through one or more AV Access devices.
+  fields:
+    target:
+      name: Devices
+      description: AV Access entities whose devices should send the CEC command.
+      required: true
+      selector:
+        entity:
+          integration: avaccess_ip
+          multiple: true
+    cec_string:
+      name: CEC command
+      description: Raw CEC command string passed to cec -s.
+      required: true
+      example: "40 04"
+      selector:
+        text:
+
+reboot_device:
+  name: Reboot device
+  description: Reboot one or more AV Access devices.
+  fields:
+    target:
+      name: Devices
+      description: AV Access entities whose devices should reboot.
+      required: true
+      selector:
+        entity:
+          integration: avaccess_ip
+          multiple: true

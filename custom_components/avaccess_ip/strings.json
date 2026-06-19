@@ -27,6 +27,20 @@
           "name": "Friendly name"
         }
       },
+      "edit_device": {
+        "title": "Edit a device",
+        "description": "Choose a configured device, then update its IP address, friendly name, and decoder display-power settings. The integration reconnects to the IP address to refresh hostname, MAC address, model, and firmware.",
+        "data": {
+          "host": "IP address",
+          "name": "Friendly name",
+          "sinkpower_mode": "Power control method",
+          "cec_poweron_cmd": "CEC power-on code",
+          "cec_standby_cmd": "CEC standby code",
+          "rs232_hex_enable": "RS232 codes are hex",
+          "rs232_poweron_cmd": "RS232 power-on code",
+          "rs232_standby_cmd": "RS232 standby code"
+        }
+      },
       "confirm_device": {
         "title": "Confirm device",
         "description": "Review the detected device data. The detected fields are informational; only the friendly name from the previous step is saved as the Home Assistant name.",
@@ -96,6 +110,40 @@
         "source": {
           "name": "Source",
           "description": "The encoder to route to all selected decoders (name or MAC)."
+        }
+      }
+    },
+    "clear_source": {
+      "name": "Clear decoder source",
+      "description": "Unbind one or more decoders from their current source.",
+      "fields": {
+        "target": {
+          "name": "Decoders",
+          "description": "The decoder media_player entities to clear."
+        }
+      }
+    },
+    "send_cec": {
+      "name": "Send CEC command",
+      "description": "Send a raw CEC command string through one or more AV Access devices.",
+      "fields": {
+        "target": {
+          "name": "Devices",
+          "description": "AV Access entities whose devices should send the CEC command."
+        },
+        "cec_string": {
+          "name": "CEC command",
+          "description": "Raw CEC command string passed to cec -s."
+        }
+      }
+    },
+    "reboot_device": {
+      "name": "Reboot device",
+      "description": "Reboot one or more AV Access devices.",
+      "fields": {
+        "target": {
+          "name": "Devices",
+          "description": "AV Access entities whose devices should reboot."
         }
       }
     }

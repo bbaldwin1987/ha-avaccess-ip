@@ -54,11 +54,13 @@ _LOGGER = logging.getLogger(__name__)
 
 TYPE_CHOICES = {TYPE_ENCODER: "Encoder (TX)", TYPE_DECODER: "Decoder (RX)"}
 ACTION_ADD_DEVICE = "add_device"
+ACTION_EDIT_DEVICE = "edit_device"
 ACTION_RENAME_DEVICE = "rename_device"
 ACTION_REMOVE_DEVICE = "remove_device"
 ACTION_SETTINGS = "settings"
 ACTION_CHOICES = {
     ACTION_ADD_DEVICE: "Add a device",
+    ACTION_EDIT_DEVICE: "Edit a device",
     ACTION_RENAME_DEVICE: "Rename a device",
     ACTION_REMOVE_DEVICE: "Remove a device",
     ACTION_SETTINGS: "Settings",
@@ -121,6 +123,8 @@ class AVAccessOptionsFlow(OptionsFlow):
             action = user_input["action"]
             if action == ACTION_ADD_DEVICE:
                 return await self.async_step_add_device()
+            if action == ACTION_EDIT_DEVICE:
+                return await self.async_step_edit_device()
             if action == ACTION_RENAME_DEVICE:
                 return await self.async_step_rename_device()
             if action == ACTION_REMOVE_DEVICE:
@@ -249,7 +253,95 @@ class AVAccessOptionsFlow(OptionsFlow):
         )
         return self.async_show_form(step_id="power_config", data_schema=schema)
 
-    # -- remove device -------------------------------------------------------
+    # -- edit/rename/remove device ------------------------------------------
+    async def async_step_edit_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Edit IP, friendly name, and decoder power settings."""
+        devices = self._devices()
+        if not devices:
+            return self.async_abort(reason="no_devices")
+
+        if user_input is not None and CONF_HOST not in self._pending:
+            self._pending[CONF_HOST] = user_input[CONF_HOST]
+            return await self.async_step_edit_device()
+
+        if user_input is not None and CONF_NAME in user_input:
+            original_host = self._pending.pop(CONF_HOST)
+            host = user_input[CONF_HOST].strip()
+            selected = next(d for d in devices if d[CONF_HOST] == original_host)
+
+            if host != original_host and any(
+                d[CONF_HOST] == host for d in devices if d[CONF_HOST] != original_host
+            ):
+                self._pending[CONF_HOST] = original_host
+                return self.async_show_form(
+                    step_id="edit_device",
+                    data_schema=self._edit_device_schema(selected),
+                    errors={"base": "already_configured"},
+                )
+
+            device, err = await _verify_device(host, selected[CONF_DEVICE_TYPE])
+            if err:
+                self._pending[CONF_HOST] = original_host
+                return self.async_show_form(
+                    step_id="edit_device",
+                    data_schema=self._edit_device_schema(selected),
+                    errors={"base": err},
+                )
+
+            updated_device = {
+                **selected,
+                CONF_HOST: host,
+                CONF_DEVICE_TYPE: device.device_type,
+                CONF_NAME: clean_alias(user_input[CONF_NAME].strip())
+                or device.device_info_name(),
+                CONF_HOSTNAME: device.hostname,
+                CONF_MAC: device.mac,
+                CONF_MODEL: device.model,
+                CONF_FIRMWARE: device.firmware,
+            }
+            if device.is_decoder:
+                updated_device.update(
+                    {
+                        CONF_SINKPOWER_MODE: user_input[CONF_SINKPOWER_MODE],
+                        CONF_CEC_POWERON: user_input.get(
+                            CONF_CEC_POWERON, DEFAULT_CEC_POWERON
+                        ),
+                        CONF_CEC_STANDBY: user_input.get(
+                            CONF_CEC_STANDBY, DEFAULT_CEC_STANDBY
+                        ),
+                        CONF_RS232_HEX: user_input.get(CONF_RS232_HEX, False),
+                        CONF_RS232_POWERON: user_input.get(CONF_RS232_POWERON, ""),
+                        CONF_RS232_STANDBY: user_input.get(CONF_RS232_STANDBY, ""),
+                    }
+                )
+
+            updated = [
+                updated_device if d[CONF_HOST] == original_host else d for d in devices
+            ]
+            self.hass.config_entries.async_update_entry(
+                self._entry, data={**self._entry.data, CONF_DEVICES: updated}
+            )
+            return self.async_create_entry(title="", data=dict(self._entry.options))
+
+        if CONF_HOST in self._pending:
+            host = self._pending[CONF_HOST]
+            selected = next(d for d in devices if d[CONF_HOST] == host)
+            return self.async_show_form(
+                step_id="edit_device",
+                data_schema=self._edit_device_schema(selected),
+            )
+
+        choices = {
+            d[CONF_HOST]: f"{d.get(CONF_NAME, d[CONF_HOST])} ({d[CONF_HOST]})"
+            for d in devices
+        }
+        return self.async_show_form(
+            step_id="edit_device",
+            data_schema=vol.Schema({vol.Required(CONF_HOST): vol.In(choices)}),
+        )
+
     async def async_step_rename_device(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -348,6 +440,44 @@ class AVAccessOptionsFlow(OptionsFlow):
     # -- helpers -------------------------------------------------------------
     def _devices(self) -> list[dict[str, Any]]:
         return list(self._entry.data.get(CONF_DEVICES, []))
+
+    def _edit_device_schema(self, device: dict[str, Any]) -> vol.Schema:
+        schema: dict[Any, Any] = {
+            vol.Required(CONF_HOST, default=device[CONF_HOST]): str,
+            vol.Required(CONF_NAME, default=device.get(CONF_NAME, device[CONF_HOST])): str,
+        }
+        if device.get(CONF_DEVICE_TYPE) == TYPE_DECODER:
+            schema.update(
+                {
+                    vol.Required(
+                        CONF_SINKPOWER_MODE,
+                        default=device.get(
+                            CONF_SINKPOWER_MODE, DEFAULT_SINKPOWER_MODE
+                        ),
+                    ): vol.In(SINKPOWER_MODES),
+                    vol.Optional(
+                        CONF_CEC_POWERON,
+                        default=device.get(CONF_CEC_POWERON, DEFAULT_CEC_POWERON),
+                    ): str,
+                    vol.Optional(
+                        CONF_CEC_STANDBY,
+                        default=device.get(CONF_CEC_STANDBY, DEFAULT_CEC_STANDBY),
+                    ): str,
+                    vol.Optional(
+                        CONF_RS232_HEX,
+                        default=device.get(CONF_RS232_HEX, False),
+                    ): bool,
+                    vol.Optional(
+                        CONF_RS232_POWERON,
+                        default=device.get(CONF_RS232_POWERON, ""),
+                    ): str,
+                    vol.Optional(
+                        CONF_RS232_STANDBY,
+                        default=device.get(CONF_RS232_STANDBY, ""),
+                    ): str,
+                }
+            )
+        return vol.Schema(schema)
 
     def _save_pending(self) -> ConfigFlowResult:
         devices = self._devices()

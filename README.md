@@ -20,7 +20,8 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration for **AV A
 - **Group switching** — an `avaccess_ip.switch_group` service switches several decoders to one source at once via UDP broadcast, falling back to sequential switching when Home Assistant is not on the device subnet.
 - **Display power (per decoder)** — a `switch` per decoder drives the attached display on/off, using that decoder's configured method (CEC, RS232, or both) and on/off codes.
 - **Online status** — every configured encoder and decoder gets an online diagnostic entity so source-only encoders are visible in Home Assistant.
-- **Device management** — add, rename, and remove configured devices from the integration's Configure menu.
+- **Device management** — add, edit, rename, and remove configured devices from the integration's Configure menu.
+- **Utility services** — clear decoder source, send raw CEC commands, and reboot AV Access devices.
 
 Out of scope for now (architecture leaves room): video wall, MRX multiview, forced resolution/color space, OSD/PNG overlay, preview stream, firmware upload.
 
@@ -61,6 +62,7 @@ ssh root@<ha-host> 'ha core restart'
 The Configure menu contains:
 
 - **Add a device** — add an encoder or decoder by IP address.
+- **Edit a device** — update IP address, friendly name, and decoder display-power settings.
 - **Rename a device** — update the friendly name stored in the integration entry.
 - **Remove a device** — remove a configured device from the integration entry.
 - **Settings** — adjust poll interval and group-switch broadcast behavior.
@@ -100,10 +102,41 @@ source: Shield
 
 Each decoder also exposes a display power switch. The switch calls `sinkpower on` and `sinkpower off` on the decoder. Configure the decoder's CEC/RS232 behavior when adding the decoder.
 
+### Utility Services
+
+Clear a decoder source:
+
+```yaml
+action: avaccess_ip.clear_source
+data:
+  target:
+    - media_player.kitchen_tv
+```
+
+Send a raw CEC command through a device:
+
+```yaml
+action: avaccess_ip.send_cec
+data:
+  target:
+    - media_player.kitchen_tv
+  cec_string: "40 04"
+```
+
+Reboot a device:
+
+```yaml
+action: avaccess_ip.reboot_device
+data:
+  target:
+    - binary_sensor.shield_online
+```
+
 ## Notes And Limitations
 
 - Device alias readback may return `"alias" not defined`; the integration ignores that value and uses the friendly name entered during setup.
 - Source state is polled. After a change made outside Home Assistant, the media player source may take up to one poll interval to update.
+- Stable IPs are strongly recommended. If an IP changes, use **Configure → Edit a device** to update the stored address.
 - Integration tile logos use Home Assistant's brand image system. This repository includes local `brand/icon.png` and `brand/logo.png` assets for Home Assistant versions that support local custom integration brands.
 - The current display power switch is assumed state because the device API does not provide display power readback.
 - Video wall, MRX multiview, preview streams, overlays, and firmware upload are intentionally out of scope for this revision.

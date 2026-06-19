@@ -18,8 +18,9 @@ These notes capture the first working hardware validation pass for the custom Ho
 | Zone2 | Encoder | `192.168.86.9` | `IPE935-341B2284DFA3` | `341B2284DFA3` |
 | Kitchen TV | Decoder | `192.168.86.2` | `IPD935-341B2284B7AF` | `341B2284B7AF` |
 | Garage TV | Decoder | `192.168.86.8` | `IPD935-341B2284B769` | `341B2284B769` |
+| Living Room TV | Decoder | `192.168.86.82` | `IPD935-341B2284B7A7` | `341B2284B7A7` |
 
-Living Room TV was planned for the same validation flow but was not part of the initial documented pass.
+Living Room TV was directly probed and identified successfully. It still needs the same full Home Assistant UI add/switch/power validation pass as Kitchen TV and Garage TV.
 
 ## Confirmed Working
 
@@ -35,6 +36,9 @@ Living Room TV was planned for the same validation flow but was not part of the 
 - Individual decoder source switching works for `Shield` and `Zone2`.
 - Group switching works through `avaccess_ip.switch_group`.
 - Source resolution works by friendly name, hostname, or MAC address.
+- Device management supports add, edit, rename, remove, and global settings.
+- Utility services are exposed for clear source, raw CEC, and reboot.
+- Sequential switching uses the same Telnet command path as individual switching; broadcast-disabled group fallback still needs a dedicated UI/service test.
 
 ## Useful Raw Device Observations
 
@@ -99,6 +103,18 @@ sinkpower on
 sinkpower off
 ```
 
+Raw CEC command:
+
+```text
+cec -s "40 04"
+```
+
+Reboot device:
+
+```text
+reboot
+```
+
 ## Group Switching Example
 
 Home Assistant action data:
@@ -122,13 +138,13 @@ If broadcast is unavailable, the integration falls back to sequential Telnet swi
 
 - Source state is poll-based; changes made outside Home Assistant are not instant.
 - Display power is assumed state; the API does not expose confirmed display power readback.
-- Device IP changes require updating/removing/re-adding the device; stable IPs are strongly recommended.
+- Stable IPs are strongly recommended. Device IPs can be edited from the integration's Configure menu.
 - Entity registry cleanup may be needed after early development builds that created stale entities.
 - Integration tile icon behavior depends on Home Assistant brand image support and frontend caching.
 
 ## Next Validation Items
 
-- Add and test Living Room TV.
+- Add Living Room TV to Home Assistant and test source switching/display power.
 - Test behavior after AV Access device reboot.
 - Test switching after Home Assistant restart without reloading the integration.
 - Test disabled broadcast mode to verify sequential group-switch fallback.

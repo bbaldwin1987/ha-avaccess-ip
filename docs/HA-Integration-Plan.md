@@ -110,9 +110,10 @@ Flow:
    - Enter the device's **IP address** (the per-device input variable you specified).
    - The integration Telnets to the IP on port 24, confirms the `/#` prompt, and reads back hostname/MAC (`/etc/version`, `gbparam g alias`, etc.) to **verify and auto-classify** the device — surfacing model and firmware so the user can confirm it matches the type they picked. The MAC becomes the stable internal identifier even though the IP is how we reach it.
    - On success, the device is registered in the HA device registry and its entities are created (media_player/switch for RX; source + diagnostics for TX).
-3. **Remove device** — options-flow action to drop a device by its entry in the list.
-4. **Edit device** — update a device's IP if it changes (see stable-IP note below).
-5. **Options** — poll interval, enable/disable the 5010 broadcast group-switch path, optional credentials placeholder for future authenticated firmware.
+3. **Edit device** — update a device's IP, friendly name, and decoder display-power settings; reconnects to refresh hostname, MAC, model, and firmware.
+4. **Rename device** — quick options-flow action to update only the friendly name.
+5. **Remove device** — options-flow action to drop a device by its entry in the list.
+6. **Options** — poll interval, enable/disable the 5010 broadcast group-switch path, optional credentials placeholder for future authenticated firmware.
 
 **Stable-IP requirement.** Because devices are addressed by manually-entered IP, each device needs a **static IP or a DHCP reservation**. A device on autoip (`169.254.x.x`) or an unreserved DHCP lease can change address on reboot and would render its entry stale until the user edits the IP. The docs and the add-device step should call this out, and the coordinator should mark a device "unavailable" (not error-spam) when its IP stops responding.
 
