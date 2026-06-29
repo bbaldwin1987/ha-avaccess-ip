@@ -1,7 +1,7 @@
 {
   "domain": "avaccess_ip",
   "name": "AV Access IP Video Distribution",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "documentation": "https://github.com/bbaldwin1987/ha-avaccess-ip",
   "issue_tracker": "https://github.com/bbaldwin1987/ha-avaccess-ip/issues",
   "codeowners": ["@bbaldwin1987"],
