@@ -108,6 +108,13 @@ def test_cmd_sinkpower():
     assert d.cmd_sinkpower(False) == "sinkpower off"
 
 
+def test_cmd_set_sinkpower_mode_updates_active_param():
+    assert d.cmd_set_sinkpower_mode("rs232") == [
+        "gbconfig --sinkpower-mode=rs232",
+        "gbparam s sinkpower_mode rs232",
+    ]
+
+
 def test_cmd_set_cec_codes():
     assert d.cmd_set_cec_codes("40 04", "ff 36") == [
         'gbparam s cec_poweron_cmd "40 04"',
@@ -117,9 +124,21 @@ def test_cmd_set_cec_codes():
 
 def test_cmd_set_rs232_codes_hex_flag():
     cmds = d.cmd_set_rs232_codes("AA", "BB", hex_enable=True)
-    assert cmds[0] == "gbconfig --rs232-hex-cmd-enable y"
+    assert cmds == [
+        "gbconfig --rs232-enable=y",
+        "gbconfig --rs232-param=9600-8n1",
+        "gbconfig --sinkpower-rs232=y",
+        "gbconfig --rs232-hex-cmd-enable=y",
+        'gbparam s rs232_poweron_cmd "AA"',
+        'gbparam s rs232_standby_cmd "BB"',
+    ]
     cmds = d.cmd_set_rs232_codes("AA", "BB", hex_enable=False)
-    assert cmds[0] == "gbconfig --rs232-hex-cmd-enable n"
+    assert cmds[3] == "gbconfig --rs232-hex-cmd-enable=n"
+
+
+def test_cmd_set_rs232_codes_custom_param():
+    cmds = d.cmd_set_rs232_codes("AA", "BB", hex_enable=True, rs232_param="115200-8n1")
+    assert cmds[1] == "gbconfig --rs232-param=115200-8n1"
 
 
 def test_cmd_get_source():
@@ -183,3 +202,69 @@ async def test_async_identify_sets_hostname_mac_and_preserves_alias(monkeypatch)
     assert dev.mac == "341B22822FEF"
     assert dev.alias == "Kitchen TV"
     assert dev.current_source_mac == "AABBCCDDEEFF"
+
+
+@pytest.mark.asyncio
+async def test_async_configure_power_applies_rs232_settings(monkeypatch):
+    dev = d.AVDevice(host="192.168.1.5", device_type=TYPE_DECODER)
+    sent = []
+
+    async def fake_commands(commands):
+        sent.extend(commands)
+
+    monkeypatch.setattr(dev.client, "commands", fake_commands)
+
+    await dev.async_configure_power(
+        mode="rs232",
+        rs232_poweron="08 22 00 00 00 02 D4",
+        rs232_standby="08 22 00 00 00 01 D5",
+        rs232_hex=True,
+    )
+
+    assert sent == [
+        "gbconfig --sinkpower-mode=rs232",
+        "gbparam s sinkpower_mode rs232",
+        "gbconfig --rs232-enable=y",
+        "gbconfig --rs232-param=9600-8n1",
+        "gbconfig --sinkpower-rs232=y",
+        "gbconfig --rs232-hex-cmd-enable=y",
+        'gbparam s rs232_poweron_cmd "08 22 00 00 00 02 D4"',
+        'gbparam s rs232_standby_cmd "08 22 00 00 00 01 D5"',
+    ]
+
+
+@pytest.mark.asyncio
+async def test_async_send_samsung_frame_art_mode_restores_power_codes(monkeypatch):
+    dev = d.AVDevice(host="192.168.1.5", device_type=TYPE_DECODER)
+    calls = []
+
+    async def fake_commands(commands):
+        calls.append(commands)
+        if commands == [d.cmd_get_rs232_poweron(), d.cmd_get_rs232_standby()]:
+            return ["08 22 00 00 00 02 D4", "08 22 00 00 00 01 D5"]
+        return []
+
+    monkeypatch.setattr(dev.client, "commands", fake_commands)
+
+    await dev.async_send_samsung_frame_art_mode(True)
+
+    assert calls[0] == [d.cmd_get_rs232_poweron(), d.cmd_get_rs232_standby()]
+    assert calls[1] == [
+        "gbconfig --sinkpower-mode=rs232",
+        "gbparam s sinkpower_mode rs232",
+        "gbconfig --rs232-enable=y",
+        "gbconfig --rs232-param=9600-8n1",
+        "gbconfig --sinkpower-rs232=y",
+        "gbconfig --rs232-hex-cmd-enable=y",
+        'gbparam s rs232_poweron_cmd "08 22 0B 0B 0E 01 B1"',
+        'gbparam s rs232_standby_cmd "08 22 0B 0B 0E 00 B2"',
+        "sinkpower on",
+    ]
+    assert calls[2] == [
+        "gbconfig --rs232-enable=y",
+        "gbconfig --rs232-param=9600-8n1",
+        "gbconfig --sinkpower-rs232=y",
+        "gbconfig --rs232-hex-cmd-enable=y",
+        'gbparam s rs232_poweron_cmd "08 22 00 00 00 02 D4"',
+        'gbparam s rs232_standby_cmd "08 22 00 00 00 01 D5"',
+    ]

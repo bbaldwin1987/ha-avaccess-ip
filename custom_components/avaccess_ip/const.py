@@ -32,10 +32,12 @@ CONF_POLL_INTERVAL: Final = "poll_interval"
 CONF_ENABLE_BROADCAST: Final = "enable_broadcast"
 
 # per-decoder display power config keys
+CONF_DISPLAY_PROFILE: Final = "display_profile"
 CONF_SINKPOWER_MODE: Final = "sinkpower_mode"
 CONF_CEC_POWERON: Final = "cec_poweron_cmd"
 CONF_CEC_STANDBY: Final = "cec_standby_cmd"
 CONF_RS232_HEX: Final = "rs232_hex_enable"
+CONF_RS232_PARAM: Final = "rs232_param"
 CONF_RS232_POWERON: Final = "rs232_poweron_cmd"
 CONF_RS232_STANDBY: Final = "rs232_standby_cmd"
 
@@ -50,8 +52,17 @@ DEFAULT_ENABLE_BROADCAST: Final = True
 DEFAULT_SINKPOWER_MODE: Final = "cec"
 DEFAULT_CEC_POWERON: Final = "40 04"
 DEFAULT_CEC_STANDBY: Final = "ff 36"
+DEFAULT_RS232_PARAM: Final = "9600-8n1"
+DEFAULT_DISPLAY_PROFILE: Final = "manual"
+DISPLAY_PROFILE_SAMSUNG_FRAME: Final = "samsung_frame"
+SAMSUNG_FRAME_RS232_POWERON: Final = "08 22 00 00 00 02 D4"
+SAMSUNG_FRAME_RS232_STANDBY: Final = "08 22 00 00 00 01 D5"
 
 SINKPOWER_MODES: Final = ["cec", "rs232", "both"]
+DISPLAY_PROFILES: Final = {
+    DEFAULT_DISPLAY_PROFILE: "Generic / manual",
+    DISPLAY_PROFILE_SAMSUNG_FRAME: "Samsung The Frame over Ex-Link",
+}
 
 # --- Model prefix -> (type, friendly model name, is_4k) -----------------------
 # Response prefix as seen from the device (per guide section 1).

@@ -26,6 +26,7 @@ from .const import (
     CONF_CEC_STANDBY,
     CONF_DEVICE_TYPE,
     CONF_DEVICES,
+    CONF_DISPLAY_PROFILE,
     CONF_ENABLE_BROADCAST,
     CONF_FIRMWARE,
     CONF_HOST,
@@ -35,15 +36,22 @@ from .const import (
     CONF_NAME,
     CONF_POLL_INTERVAL,
     CONF_RS232_HEX,
+    CONF_RS232_PARAM,
     CONF_RS232_POWERON,
     CONF_RS232_STANDBY,
     CONF_SINKPOWER_MODE,
     DEFAULT_CEC_POWERON,
     DEFAULT_CEC_STANDBY,
+    DEFAULT_DISPLAY_PROFILE,
     DEFAULT_ENABLE_BROADCAST,
     DEFAULT_POLL_INTERVAL,
+    DEFAULT_RS232_PARAM,
     DEFAULT_SINKPOWER_MODE,
+    DISPLAY_PROFILE_SAMSUNG_FRAME,
+    DISPLAY_PROFILES,
     DOMAIN,
+    SAMSUNG_FRAME_RS232_POWERON,
+    SAMSUNG_FRAME_RS232_STANDBY,
     SINKPOWER_MODES,
     TYPE_DECODER,
     TYPE_ENCODER,
@@ -188,7 +196,7 @@ class AVAccessOptionsFlow(OptionsFlow):
                 self._pending = {}
                 return await self.async_step_init()
             if self._pending.get(CONF_DEVICE_TYPE) == TYPE_DECODER:
-                return await self.async_step_power_config()
+                return await self.async_step_display_profile()
             return self._save_pending()
 
         schema = vol.Schema(
@@ -232,23 +240,54 @@ class AVAccessOptionsFlow(OptionsFlow):
         )
 
     # -- per-decoder display power config -----------------------------------
+    async def async_step_display_profile(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            self._pending.update(user_input)
+            self._apply_display_profile_defaults(self._pending, overwrite_empty=True)
+            return await self.async_step_power_config()
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_DISPLAY_PROFILE, default=DEFAULT_DISPLAY_PROFILE
+                ): vol.In(DISPLAY_PROFILES),
+            }
+        )
+        return self.async_show_form(step_id="display_profile", data_schema=schema)
+
     async def async_step_power_config(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         if user_input is not None:
             self._pending.update(user_input)
+            await self._async_apply_power_config(self._pending)
             return self._save_pending()
 
         schema = vol.Schema(
             {
                 vol.Required(
-                    CONF_SINKPOWER_MODE, default=DEFAULT_SINKPOWER_MODE
+                    CONF_SINKPOWER_MODE,
+                    default=self._pending.get(
+                        CONF_SINKPOWER_MODE, DEFAULT_SINKPOWER_MODE
+                    ),
                 ): vol.In(SINKPOWER_MODES),
                 vol.Optional(CONF_CEC_POWERON, default=DEFAULT_CEC_POWERON): str,
                 vol.Optional(CONF_CEC_STANDBY, default=DEFAULT_CEC_STANDBY): str,
-                vol.Optional(CONF_RS232_HEX, default=False): bool,
-                vol.Optional(CONF_RS232_POWERON, default=""): str,
-                vol.Optional(CONF_RS232_STANDBY, default=""): str,
+                vol.Optional(
+                    CONF_RS232_HEX, default=self._pending.get(CONF_RS232_HEX, False)
+                ): bool,
+                vol.Optional(
+                    CONF_RS232_PARAM,
+                    default=self._pending.get(CONF_RS232_PARAM, DEFAULT_RS232_PARAM),
+                ): str,
+                vol.Optional(
+                    CONF_RS232_POWERON, default=self._pending.get(CONF_RS232_POWERON, "")
+                ): str,
+                vol.Optional(
+                    CONF_RS232_STANDBY, default=self._pending.get(CONF_RS232_STANDBY, "")
+                ): str,
             }
         )
         return self.async_show_form(step_id="power_config", data_schema=schema)
@@ -305,6 +344,9 @@ class AVAccessOptionsFlow(OptionsFlow):
                 updated_device.update(
                     {
                         CONF_SINKPOWER_MODE: user_input[CONF_SINKPOWER_MODE],
+                        CONF_DISPLAY_PROFILE: user_input.get(
+                            CONF_DISPLAY_PROFILE, DEFAULT_DISPLAY_PROFILE
+                        ),
                         CONF_CEC_POWERON: user_input.get(
                             CONF_CEC_POWERON, DEFAULT_CEC_POWERON
                         ),
@@ -312,10 +354,23 @@ class AVAccessOptionsFlow(OptionsFlow):
                             CONF_CEC_STANDBY, DEFAULT_CEC_STANDBY
                         ),
                         CONF_RS232_HEX: user_input.get(CONF_RS232_HEX, False),
+                        CONF_RS232_PARAM: user_input.get(
+                            CONF_RS232_PARAM, DEFAULT_RS232_PARAM
+                        ),
                         CONF_RS232_POWERON: user_input.get(CONF_RS232_POWERON, ""),
                         CONF_RS232_STANDBY: user_input.get(CONF_RS232_STANDBY, ""),
                     }
                 )
+                self._apply_display_profile_defaults(
+                    updated_device,
+                    overwrite_empty=(
+                        selected.get(CONF_DISPLAY_PROFILE, DEFAULT_DISPLAY_PROFILE)
+                        != DISPLAY_PROFILE_SAMSUNG_FRAME
+                        and updated_device.get(CONF_DISPLAY_PROFILE)
+                        == DISPLAY_PROFILE_SAMSUNG_FRAME
+                    ),
+                )
+                await self._async_apply_power_config(updated_device)
 
             updated = [
                 updated_device if d[CONF_HOST] == original_host else d for d in devices
@@ -450,6 +505,12 @@ class AVAccessOptionsFlow(OptionsFlow):
             schema.update(
                 {
                     vol.Required(
+                        CONF_DISPLAY_PROFILE,
+                        default=device.get(
+                            CONF_DISPLAY_PROFILE, DEFAULT_DISPLAY_PROFILE
+                        ),
+                    ): vol.In(DISPLAY_PROFILES),
+                    vol.Required(
                         CONF_SINKPOWER_MODE,
                         default=device.get(
                             CONF_SINKPOWER_MODE, DEFAULT_SINKPOWER_MODE
@@ -468,6 +529,10 @@ class AVAccessOptionsFlow(OptionsFlow):
                         default=device.get(CONF_RS232_HEX, False),
                     ): bool,
                     vol.Optional(
+                        CONF_RS232_PARAM,
+                        default=device.get(CONF_RS232_PARAM, DEFAULT_RS232_PARAM),
+                    ): str,
+                    vol.Optional(
                         CONF_RS232_POWERON,
                         default=device.get(CONF_RS232_POWERON, ""),
                     ): str,
@@ -478,6 +543,40 @@ class AVAccessOptionsFlow(OptionsFlow):
                 }
             )
         return vol.Schema(schema)
+
+    def _apply_display_profile_defaults(
+        self, device_data: dict[str, Any], overwrite_empty: bool
+    ) -> None:
+        if device_data.get(CONF_DISPLAY_PROFILE) != DISPLAY_PROFILE_SAMSUNG_FRAME:
+            return
+        defaults = {
+            CONF_SINKPOWER_MODE: "rs232",
+            CONF_RS232_HEX: True,
+            CONF_RS232_PARAM: DEFAULT_RS232_PARAM,
+            CONF_RS232_POWERON: SAMSUNG_FRAME_RS232_POWERON,
+            CONF_RS232_STANDBY: SAMSUNG_FRAME_RS232_STANDBY,
+        }
+        for key, value in defaults.items():
+            if overwrite_empty or not device_data.get(key):
+                device_data[key] = value
+
+    async def _async_apply_power_config(self, device_data: dict[str, Any]) -> None:
+        if device_data.get(CONF_DEVICE_TYPE) != TYPE_DECODER:
+            return
+        device = AVDevice(
+            host=device_data[CONF_HOST],
+            device_type=device_data[CONF_DEVICE_TYPE],
+            alias=device_data.get(CONF_NAME),
+        )
+        await device.async_configure_power(
+            mode=device_data.get(CONF_SINKPOWER_MODE, DEFAULT_SINKPOWER_MODE),
+            cec_poweron=device_data.get(CONF_CEC_POWERON, DEFAULT_CEC_POWERON),
+            cec_standby=device_data.get(CONF_CEC_STANDBY, DEFAULT_CEC_STANDBY),
+            rs232_poweron=device_data.get(CONF_RS232_POWERON) or None,
+            rs232_standby=device_data.get(CONF_RS232_STANDBY) or None,
+            rs232_hex=device_data.get(CONF_RS232_HEX, False),
+            rs232_param=device_data.get(CONF_RS232_PARAM, DEFAULT_RS232_PARAM),
+        )
 
     def _save_pending(self) -> ConfigFlowResult:
         devices = self._devices()

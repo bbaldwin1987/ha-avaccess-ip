@@ -30,6 +30,7 @@ SERVICE_SWITCH_GROUP = "switch_group"
 SERVICE_CLEAR_SOURCE = "clear_source"
 SERVICE_SEND_CEC = "send_cec"
 SERVICE_REBOOT_DEVICE = "reboot_device"
+SERVICE_SAMSUNG_FRAME_ART_MODE = "samsung_frame_art_mode"
 
 _SWITCH_GROUP_SCHEMA = vol.Schema(
     {
@@ -42,6 +43,12 @@ _SEND_CEC_SCHEMA = vol.Schema(
     {
         vol.Required("target"): cv.entity_ids,
         vol.Required("cec_string"): cv.string,
+    }
+)
+_SAMSUNG_FRAME_ART_MODE_SCHEMA = vol.Schema(
+    {
+        vol.Required("target"): cv.entity_ids,
+        vol.Required("enabled"): cv.boolean,
     }
 )
 
@@ -131,11 +138,28 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             return
         await asyncio.gather(*(d.async_reboot() for d in devices))
 
+    async def _handle_samsung_frame_art_mode(call: ServiceCall) -> None:
+        coordinators = _find_coordinators(hass)
+        decoders = _resolve_decoders(hass, coordinators, call.data["target"])
+        if not decoders:
+            _LOGGER.error(
+                "samsung_frame_art_mode: no matching decoders for %s",
+                call.data["target"],
+            )
+            return
+        await asyncio.gather(
+            *(d.async_send_samsung_frame_art_mode(call.data["enabled"]) for d in decoders)
+        )
+
     service_defs = {
         SERVICE_SWITCH_GROUP: (_handle_switch_group, _SWITCH_GROUP_SCHEMA),
         SERVICE_CLEAR_SOURCE: (_handle_clear_source, _ENTITY_TARGET_SCHEMA),
         SERVICE_SEND_CEC: (_handle_send_cec, _SEND_CEC_SCHEMA),
         SERVICE_REBOOT_DEVICE: (_handle_reboot_device, _ENTITY_TARGET_SCHEMA),
+        SERVICE_SAMSUNG_FRAME_ART_MODE: (
+            _handle_samsung_frame_art_mode,
+            _SAMSUNG_FRAME_ART_MODE_SCHEMA,
+        ),
     }
     for service, (handler, schema) in service_defs.items():
         if not hass.services.has_service(DOMAIN, service):
@@ -148,6 +172,7 @@ async def async_unload_services(hass: HomeAssistant) -> None:
         SERVICE_CLEAR_SOURCE,
         SERVICE_SEND_CEC,
         SERVICE_REBOOT_DEVICE,
+        SERVICE_SAMSUNG_FRAME_ART_MODE,
     ):
         if hass.services.has_service(DOMAIN, service):
             hass.services.async_remove(DOMAIN, service)

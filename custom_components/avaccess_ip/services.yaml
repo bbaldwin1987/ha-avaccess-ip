@@ -65,3 +65,22 @@ reboot_device:
         entity:
           integration: avaccess_ip
           multiple: true
+
+samsung_frame_art_mode:
+  name: Samsung Frame Art Mode
+  description: Turn Samsung Frame Art Mode on or off through a decoder's RS232 Ex-Link connection.
+  fields:
+    target:
+      name: Decoders
+      description: Decoder media_player or display power entities connected to Samsung Frame TVs.
+      required: true
+      selector:
+        entity:
+          integration: avaccess_ip
+          multiple: true
+    enabled:
+      name: Art Mode enabled
+      description: Turn Art Mode on when enabled, or off when disabled.
+      required: true
+      selector:
+        boolean:

@@ -36,8 +36,12 @@ Living Room TV was directly probed, then loaded through the target Home Assistan
 - Individual decoder source switching works for `Shield` and `Zone2`.
 - Group switching works through `avaccess_ip.switch_group`.
 - Target Home Assistant validation passed for device loading, individual switching, group switching, and display power.
+- Samsung Frame Ex-Link through Kitchen TV decoder works after crossing RS232 TX/RX.
+- Samsung Frame RS232 power on/off works through decoder `sinkpower` in RS232 mode.
+- Samsung Frame Art Mode on was validated by temporarily loading Art Mode RS232 codes and calling `sinkpower on`.
 - Source resolution works by friendly name, hostname, or MAC address.
 - Device management supports add, edit, rename, remove, and global settings.
+- Decoder setup/editing includes a Samsung The Frame over Ex-Link display profile that pre-fills the tested RS232 settings.
 - Utility services are exposed for clear source, raw CEC, and reboot.
 - Sequential switching uses the same Telnet command path as individual switching; broadcast-disabled group fallback remains a dedicated follow-up test.
 
@@ -116,6 +120,39 @@ Reboot device:
 reboot
 ```
 
+## Samsung Frame RS232 Ex-Link Notes
+
+Tested decoder: Kitchen TV, `192.168.86.2`, hostname `IPD935-341B2284B7AF`.
+
+Wiring that worked:
+
+```text
+AV Access TX -> Samsung RX
+AV Access RX -> Samsung TX
+GND -> GND
+```
+
+Decoder RS232/sinkpower setup that worked:
+
+```text
+gbparam s sinkpower_mode rs232
+gbconfig --rs232-enable=y
+gbconfig --rs232-param=9600-8n1
+gbconfig --rs232-hex-cmd-enable=y
+gbconfig --sinkpower-rs232=y
+```
+
+Samsung Frame Ex-Link commands tested:
+
+```text
+Power On:  08 22 00 00 00 02 D4
+Power Off: 08 22 00 00 00 01 D5
+Art On:    08 22 0B 0B 0E 01 B1
+Art Off:   08 22 0B 0B 0E 00 B2
+```
+
+The decoder firmware did not expose an obvious raw RS232 send command. The working path is to store the desired RS232 hex command in the decoder's `rs232_poweron_cmd` or `rs232_standby_cmd` slot and trigger it with `sinkpower on` or `sinkpower off`.
+
 ## Group Switching Example
 
 Home Assistant action data:
@@ -148,4 +185,4 @@ If broadcast is unavailable, the integration falls back to sequential Telnet swi
 - Test behavior after AV Access device reboot.
 - Test switching after Home Assistant restart without reloading the integration.
 - Test disabled broadcast mode to verify sequential group-switch fallback.
-- Document RS232 display power setup with a real RS232 display.
+- Confirm Samsung Frame Art Off behavior from Home Assistant service path.

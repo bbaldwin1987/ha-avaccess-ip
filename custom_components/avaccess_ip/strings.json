@@ -33,10 +33,12 @@
         "data": {
           "host": "IP address",
           "name": "Friendly name",
+          "display_profile": "Display profile",
           "sinkpower_mode": "Power control method",
           "cec_poweron_cmd": "CEC power-on code",
           "cec_standby_cmd": "CEC standby code",
           "rs232_hex_enable": "RS232 codes are hex",
+          "rs232_param": "RS232 serial parameter",
           "rs232_poweron_cmd": "RS232 power-on code",
           "rs232_standby_cmd": "RS232 standby code"
         }
@@ -55,14 +57,22 @@
           "detected_firmware": "Detected firmware"
         }
       },
+      "display_profile": {
+        "title": "Display profile",
+        "description": "Choose a display preset for this decoder. Samsung The Frame pre-fills the tested RS232 Ex-Link settings; Generic / manual leaves the power settings editable from defaults.",
+        "data": {
+          "display_profile": "Display profile"
+        }
+      },
       "power_config": {
         "title": "Display power (this decoder)",
-        "description": "Configure how this decoder turns its attached display on and off. CEC defaults work for many TVs; RS232 codes are display-specific.",
+        "description": "Configure how this decoder turns its attached display on and off. CEC defaults work for many TVs; RS232 codes are display-specific. For Samsung The Frame over Ex-Link, use the pre-filled RS232 values and cross TX/RX wiring.",
         "data": {
           "sinkpower_mode": "Power control method",
           "cec_poweron_cmd": "CEC power-on code",
           "cec_standby_cmd": "CEC standby code",
           "rs232_hex_enable": "RS232 codes are hex",
+          "rs232_param": "RS232 serial parameter",
           "rs232_poweron_cmd": "RS232 power-on code",
           "rs232_standby_cmd": "RS232 standby code"
         }
@@ -144,6 +154,20 @@
         "target": {
           "name": "Devices",
           "description": "AV Access entities whose devices should reboot."
+        }
+      }
+    },
+    "samsung_frame_art_mode": {
+      "name": "Samsung Frame Art Mode",
+      "description": "Turn Samsung Frame Art Mode on or off through a decoder's RS232 Ex-Link connection.",
+      "fields": {
+        "target": {
+          "name": "Decoders",
+          "description": "Decoder entities connected to Samsung Frame TVs."
+        },
+        "enabled": {
+          "name": "Art Mode enabled",
+          "description": "Turn Art Mode on when enabled, or off when disabled."
         }
       }
     }

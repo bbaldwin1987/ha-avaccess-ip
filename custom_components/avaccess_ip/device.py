@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from .const import (
     DEFAULT_CEC_POWERON,
     DEFAULT_CEC_STANDBY,
+    DEFAULT_RS232_PARAM,
     MANUFACTURER,
     MODEL_MAP,
     SOURCE_NULL,
@@ -29,6 +30,9 @@ from .const import (
 from .transport import TelnetClient
 
 _LOGGER = logging.getLogger(__name__)
+
+SAMSUNG_FRAME_ART_ON = "08 22 0B 0B 0E 01 B1"
+SAMSUNG_FRAME_ART_OFF = "08 22 0B 0B 0E 00 B2"
 
 # Hostname looks like "IPE935-341B22822FEF": <prefix>-<12 hex MAC>.
 # Be lenient: the guide itself contains a typo ("IPE35-..."), so we match a
@@ -118,8 +122,11 @@ def cmd_sinkpower(on: bool) -> str:
     return "sinkpower on" if on else "sinkpower off"
 
 
-def cmd_set_sinkpower_mode(mode: str) -> str:
-    return f"gbconfig --sinkpower-mode {mode}"
+def cmd_set_sinkpower_mode(mode: str) -> list[str]:
+    return [
+        f"gbconfig --sinkpower-mode={mode}",
+        f"gbparam s sinkpower_mode {mode}",
+    ]
 
 
 def cmd_set_cec_codes(poweron: str, standby: str) -> list[str]:
@@ -129,9 +136,17 @@ def cmd_set_cec_codes(poweron: str, standby: str) -> list[str]:
     ]
 
 
-def cmd_set_rs232_codes(poweron: str, standby: str, hex_enable: bool) -> list[str]:
+def cmd_set_rs232_codes(
+    poweron: str,
+    standby: str,
+    hex_enable: bool,
+    rs232_param: str = DEFAULT_RS232_PARAM,
+) -> list[str]:
     return [
-        f"gbconfig --rs232-hex-cmd-enable {'y' if hex_enable else 'n'}",
+        "gbconfig --rs232-enable=y",
+        f"gbconfig --rs232-param={rs232_param}",
+        "gbconfig --sinkpower-rs232=y",
+        f"gbconfig --rs232-hex-cmd-enable={'y' if hex_enable else 'n'}",
         f'gbparam s rs232_poweron_cmd "{poweron}"',
         f'gbparam s rs232_standby_cmd "{standby}"',
     ]
@@ -143,6 +158,14 @@ def cmd_send_cec(cec_string: str) -> str:
 
 def cmd_reboot() -> str:
     return "reboot"
+
+
+def cmd_get_rs232_poweron() -> str:
+    return "gbparam g rs232_poweron_cmd"
+
+
+def cmd_get_rs232_standby() -> str:
+    return "gbparam g rs232_standby_cmd"
 
 
 @dataclass
@@ -239,6 +262,41 @@ class AVDevice:
     async def async_reboot(self) -> None:
         await self.client.command(cmd_reboot())
 
+    async def async_send_samsung_frame_art_mode(self, enabled: bool) -> None:
+        """Send Samsung Frame Art Mode over RS232, restoring power codes after.
+
+        The decoder exposes RS232 transmission through ``sinkpower`` using the
+        stored power-on/standby command slots. For discrete Art Mode control we
+        temporarily load the Art command pair, trigger sinkpower, then restore
+        the previously configured display power commands.
+        """
+        current_on, current_off = await self.client.commands(
+            [cmd_get_rs232_poweron(), cmd_get_rs232_standby()]
+        )
+        restore_on = clean_alias(current_on) or current_on
+        restore_off = clean_alias(current_off) or current_off
+        try:
+            await self.client.commands(
+                cmd_set_sinkpower_mode("rs232")
+                + cmd_set_rs232_codes(
+                    SAMSUNG_FRAME_ART_ON,
+                    SAMSUNG_FRAME_ART_OFF,
+                    True,
+                    DEFAULT_RS232_PARAM,
+                )
+                + [cmd_sinkpower(enabled)]
+            )
+        finally:
+            if restore_on and restore_off:
+                await self.client.commands(
+                    cmd_set_rs232_codes(
+                        restore_on,
+                        restore_off,
+                        True,
+                        DEFAULT_RS232_PARAM,
+                    )
+                )
+
     async def async_set_display_power(self, on: bool) -> None:
         await self.client.command(cmd_sinkpower(on))
 
@@ -250,13 +308,16 @@ class AVDevice:
         rs232_poweron: str | None = None,
         rs232_standby: str | None = None,
         rs232_hex: bool = False,
+        rs232_param: str = DEFAULT_RS232_PARAM,
     ) -> None:
         """Apply per-decoder display-power configuration."""
-        cmds = [cmd_set_sinkpower_mode(mode)]
+        cmds = cmd_set_sinkpower_mode(mode)
         if mode in ("cec", "both"):
             cmds += cmd_set_cec_codes(cec_poweron, cec_standby)
         if mode in ("rs232", "both") and rs232_poweron and rs232_standby:
-            cmds += cmd_set_rs232_codes(rs232_poweron, rs232_standby, rs232_hex)
+            cmds += cmd_set_rs232_codes(
+                rs232_poweron, rs232_standby, rs232_hex, rs232_param
+            )
         await self.client.commands(cmds)
 
     async def async_check_available(self) -> bool:

@@ -19,6 +19,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration for **AV A
 - **Matrix switching** — each decoder is a `media_player`; pick any encoder as its source (bonded video+audio+RS232 routing).
 - **Group switching** — an `avaccess_ip.switch_group` service switches several decoders to one source at once via UDP broadcast, falling back to sequential switching when Home Assistant is not on the device subnet.
 - **Display power (per decoder)** — a `switch` per decoder drives the attached display on/off, using that decoder's configured method (CEC, RS232, or both) and on/off codes.
+- **Samsung Frame Art Mode** — service support for discrete Art Mode on/off over a decoder's RS232 Ex-Link connection.
 - **Online status** — every configured encoder and decoder gets an online diagnostic entity so source-only encoders are visible in Home Assistant.
 - **Device management** — add, edit, rename, and remove configured devices from the integration's Configure menu.
 - **Utility services** — clear decoder source, send raw CEC commands, and reboot AV Access devices.
@@ -38,7 +39,8 @@ Out of scope for now (architecture leaves room): video wall, MRX multiview, forc
 4. Go to **Settings → Devices & Services → Add Integration → AV Access IP**.
 5. Open **Configure** on the AV Access IP integration.
 6. Add each encoder and decoder by choosing its type, entering its IP address, and entering a friendly name.
-7. Confirm the detected hostname, MAC address, model, and firmware before saving.
+7. For decoders, choose a display profile. Use **Samsung The Frame over Ex-Link** to pre-fill the tested RS232 power settings.
+8. Confirm the detected hostname, MAC address, model, and firmware before saving.
 
 ## Manual installation (development)
 
@@ -62,7 +64,7 @@ ssh root@<ha-host> 'ha core restart'
 The Configure menu contains:
 
 - **Add a device** — add an encoder or decoder by IP address.
-- **Edit a device** — update IP address, friendly name, and decoder display-power settings.
+- **Edit a device** — update IP address, friendly name, display profile, and decoder display-power settings.
 - **Rename a device** — update the friendly name stored in the integration entry.
 - **Remove a device** — remove a configured device from the integration entry.
 - **Settings** — adjust poll interval and group-switch broadcast behavior.
@@ -102,6 +104,30 @@ source: Shield
 
 Each decoder also exposes a display power switch. The switch calls `sinkpower on` and `sinkpower off` on the decoder. Configure the decoder's CEC/RS232 behavior when adding the decoder.
 
+For Samsung Frame TVs using Ex-Link through an AV Access decoder, choose the **Samsung The Frame over Ex-Link** display profile during decoder setup/editing. It pre-fills RS232 mode with hex commands enabled:
+
+```text
+RS232 parameter: 9600-8n1
+Power On: 08 22 00 00 00 02 D4
+Power Off: 08 22 00 00 00 01 D5
+```
+
+Wire the decoder RS232 adapter with TX/RX crossed: AV Access TX to Samsung RX, AV Access RX to Samsung TX, and GND to GND.
+
+### Samsung Frame Art Mode
+
+Use `avaccess_ip.samsung_frame_art_mode` to toggle Art Mode through the Samsung Frame Ex-Link connection:
+
+```yaml
+action: avaccess_ip.samsung_frame_art_mode
+data:
+  target:
+    - media_player.kitchen_tv
+  enabled: true
+```
+
+The service temporarily loads the Samsung Art Mode RS232 commands into the decoder's sinkpower command slots, calls `sinkpower on` or `sinkpower off`, then restores the configured display power RS232 commands.
+
 ### Utility Services
 
 Clear a decoder source:
@@ -139,6 +165,7 @@ data:
 - Stable IPs are strongly recommended. If an IP changes, use **Configure → Edit a device** to update the stored address.
 - Integration tile logos use Home Assistant's brand image system. This repository includes local `brand/icon.png` and `brand/logo.png` assets for Home Assistant versions that support local custom integration brands.
 - The current display power switch is assumed state because the device API does not provide display power readback.
+- Samsung Frame Art Mode requires a working RS232 Ex-Link connection and validated Samsung command codes for the target TV model.
 - Video wall, MRX multiview, preview streams, overlays, and firmware upload are intentionally out of scope for this revision.
 
 ## Development

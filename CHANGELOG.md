@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Samsung Frame Art Mode service over decoder RS232 Ex-Link: `avaccess_ip.samsung_frame_art_mode`.
+- Optional decoder display profile selection, including a Samsung The Frame over Ex-Link preset.
+- RS232 serial parameter support in decoder display-power setup, defaulting to `9600-8n1`.
+
+### Fixed
+
+- Decoder RS232 display-power setup now applies settings to hardware when adding or editing a decoder.
+- RS232 sinkpower mode setup now writes the active `sinkpower_mode` parameter used by tested 4KIP200D firmware.
+
 ## v0.1.0 - First Hardware-Tested Revision
 
 ### Added
