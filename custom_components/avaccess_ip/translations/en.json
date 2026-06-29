@@ -108,6 +108,16 @@
       "no_devices": "There are no devices to remove."
     }
   },
+  "entity": {
+    "switch": {
+      "display_power": {
+        "name": "Display power"
+      },
+      "samsung_frame_art_mode": {
+        "name": "Samsung Frame Art Mode"
+      }
+    }
+  },
   "services": {
     "switch_group": {
       "name": "Switch group to source",

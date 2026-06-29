@@ -15,6 +15,8 @@ sys.path.insert(
 
 from avaccess_ip import device as d  # noqa: E402
 from avaccess_ip.const import (  # noqa: E402
+    DEFAULT_DISPLAY_PROFILE,
+    DISPLAY_PROFILE_SAMSUNG_FRAME,
     TYPE_DECODER,
     TYPE_ENCODER,
     TYPE_MRX,
@@ -168,6 +170,13 @@ def test_avdevice_unique_id_prefers_mac():
 def test_avdevice_unique_id_falls_back_to_host():
     dev = d.AVDevice(host="192.168.1.5", device_type=TYPE_DECODER)
     assert dev.unique_id == "192.168.1.5"
+
+
+def test_avdevice_display_profile_defaults_to_manual():
+    dev = d.AVDevice(host="192.168.1.5", device_type=TYPE_DECODER)
+    assert dev.display_profile == DEFAULT_DISPLAY_PROFILE
+    dev.display_profile = DISPLAY_PROFILE_SAMSUNG_FRAME
+    assert dev.display_profile == DISPLAY_PROFILE_SAMSUNG_FRAME
 
 
 def test_avdevice_name_precedence():

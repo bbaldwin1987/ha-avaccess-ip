@@ -19,7 +19,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration for **AV A
 - **Matrix switching** — each decoder is a `media_player`; pick any encoder as its source (bonded video+audio+RS232 routing).
 - **Group switching** — an `avaccess_ip.switch_group` service switches several decoders to one source at once via UDP broadcast, falling back to sequential switching when Home Assistant is not on the device subnet.
 - **Display power (per decoder)** — a `switch` per decoder drives the attached display on/off, using that decoder's configured method (CEC, RS232, or both) and on/off codes.
-- **Samsung Frame Art Mode** — service support for discrete Art Mode on/off over a decoder's RS232 Ex-Link connection.
+- **Samsung Frame Art Mode** — switch and service support for discrete Art Mode on/off over a decoder's RS232 Ex-Link connection.
 - **Online status** — every configured encoder and decoder gets an online diagnostic entity so source-only encoders are visible in Home Assistant.
 - **Device management** — add, edit, rename, and remove configured devices from the integration's Configure menu.
 - **Utility services** — clear decoder source, send raw CEC commands, and reboot AV Access devices.
@@ -117,6 +117,8 @@ Wire the decoder RS232 adapter with TX/RX crossed: AV Access TX to Samsung RX, A
 ### Samsung Frame Art Mode
 
 Use `avaccess_ip.samsung_frame_art_mode` to toggle Art Mode through the Samsung Frame Ex-Link connection:
+
+When a decoder's display profile is set to **Samsung The Frame over Ex-Link**, Home Assistant also creates a `Samsung Frame Art Mode` switch for that decoder.
 
 ```yaml
 action: avaccess_ip.samsung_frame_art_mode

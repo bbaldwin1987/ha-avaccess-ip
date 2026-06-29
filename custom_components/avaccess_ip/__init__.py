@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from .const import (
     CONF_DEVICE_TYPE,
     CONF_DEVICES,
+    CONF_DISPLAY_PROFILE,
     CONF_FIRMWARE,
     CONF_HOST,
     CONF_HOSTNAME,
@@ -18,6 +19,7 @@ from .const import (
     CONF_MODEL,
     CONF_NAME,
     CONF_POLL_INTERVAL,
+    DEFAULT_DISPLAY_PROFILE,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
 )
@@ -48,6 +50,7 @@ def _build_devices(entry: ConfigEntry) -> dict[str, AVDevice]:
         device.mac = item.get(CONF_MAC)
         device.model = item.get(CONF_MODEL)
         device.firmware = item.get(CONF_FIRMWARE)
+        device.display_profile = item.get(CONF_DISPLAY_PROFILE, DEFAULT_DISPLAY_PROFILE)
         devices[host] = device
     return devices
 

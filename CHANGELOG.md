@@ -5,6 +5,7 @@
 ### Added
 
 - Samsung Frame Art Mode service over decoder RS232 Ex-Link: `avaccess_ip.samsung_frame_art_mode`.
+- Samsung Frame Art Mode switch for decoders using the Samsung The Frame over Ex-Link display profile.
 - Optional decoder display profile selection, including a Samsung The Frame over Ex-Link preset.
 - RS232 serial parameter support in decoder display-power setup, defaulting to `9600-8n1`.
 

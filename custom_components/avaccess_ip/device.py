@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from .const import (
     DEFAULT_CEC_POWERON,
     DEFAULT_CEC_STANDBY,
+    DEFAULT_DISPLAY_PROFILE,
     DEFAULT_RS232_PARAM,
     MANUFACTURER,
     MODEL_MAP,
@@ -181,6 +182,7 @@ class AVDevice:
     is_4k: bool = True
     firmware: str | None = None
     alias: str | None = None
+    display_profile: str = DEFAULT_DISPLAY_PROFILE
     available: bool = False
     current_source_mac: str | None = None   # for RX: bonded source MAC
     client: TelnetClient = field(init=False)
